@@ -32,3 +32,18 @@ docker run --rm \
   --privileged \
   plugins/docker --dry-run
 ```
+
+usage in drone
+```
+  pull-image:
+    image: <...>/drone-docker:1.0.0
+    insecure: true
+    privileged: true
+    disable_build: true
+    script:
+      - chmod +x *.sh
+      - ./image_helper.sh
+      - ls -al
+```
+
+> note: script will run before build,if build is enabled

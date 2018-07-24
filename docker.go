@@ -51,6 +51,12 @@ type (
 		Repo        string   // Docker build repository
 		LabelSchema []string // Label schema map
 		NoCache     bool     // Docker build no-cache
+		Disable     bool     // Build disable
+	}
+
+	// Plugin defines the Docker commands parameters.
+	Script struct {
+		Script []string
 	}
 
 	// Plugin defines the Docker plugin parameters.
@@ -58,6 +64,7 @@ type (
 		Login   Login  // Docker login configuration
 		Build   Build  // Docker build configuration
 		Daemon  Daemon // Docker daemon configuration
+		Script  Script // Raw command configuration
 		Dryrun  bool   // Docker push is skipped
 		Cleanup bool   // Docker purge is enabled
 	}
@@ -115,19 +122,31 @@ func (p Plugin) Exec() error {
 	cmds = append(cmds, commandVersion()) // docker version
 	cmds = append(cmds, commandInfo())    // docker info
 
-	cmds = append(cmds, commandBuild(p.Build)) // docker build
-
-	for _, tag := range p.Build.Tags {
-		cmds = append(cmds, commandTag(p.Build, tag)) // docker tag
-
-		if p.Dryrun == false {
-			cmds = append(cmds, commandPush(p.Build, tag)) // docker push
+	if len(p.Script.Script) != 0 {
+		// command pipline
+		for _, line := range p.Script.Script {
+			cmds = append(cmds, exec.Command(
+				shExe, "-c", line,
+			))
 		}
 	}
 
-	if p.Cleanup {
-		cmds = append(cmds, commandRmi(p.Build.Name)) // docker rmi
-		cmds = append(cmds, commandPrune())           // docker system prune -f
+	if !p.Build.Disable {
+		// build pipline
+		cmds = append(cmds, commandBuild(p.Build)) // docker build
+
+		for _, tag := range p.Build.Tags {
+			cmds = append(cmds, commandTag(p.Build, tag)) // docker tag
+
+			if p.Dryrun == false {
+				cmds = append(cmds, commandPush(p.Build, tag)) // docker push
+			}
+		}
+
+		if p.Cleanup {
+			cmds = append(cmds, commandRmi(p.Build.Name)) // docker rmi
+			cmds = append(cmds, commandPrune())           // docker system prune -f
+		}
 	}
 
 	// execute all commands in batch mode.
@@ -147,6 +166,7 @@ func (p Plugin) Exec() error {
 
 const dockerExe = "/usr/local/bin/docker"
 const dockerdExe = "/usr/local/bin/dockerd"
+const shExe = "/bin/sh"
 
 // helper function to create the docker login command.
 func commandLogin(login Login) *exec.Cmd {

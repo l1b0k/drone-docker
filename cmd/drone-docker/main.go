@@ -107,6 +107,11 @@ func main() {
 			Usage:  "don't start the docker daemon",
 			EnvVar: "PLUGIN_DAEMON_OFF",
 		},
+		cli.StringSliceFlag{
+			Name:   "script",
+			Usage:  "run script",
+			EnvVar: "PLUGIN_SCRIPT,PLUGIN_SCRIPTS",
+		},
 		cli.StringFlag{
 			Name:   "dockerfile",
 			Usage:  "build dockerfile",
@@ -212,6 +217,11 @@ func main() {
 			Usage:  "do not use cached intermediate containers",
 			EnvVar: "PLUGIN_NO_CACHE",
 		},
+		cli.BoolFlag{
+			Name:   "disable-build",
+			Usage:  "disable build",
+			EnvVar: "PLUGIN_DISABLE_BUILD",
+		},
 	}
 
 	if err := app.Run(os.Args); err != nil {
@@ -229,6 +239,9 @@ func run(c *cli.Context) error {
 			Password: c.String("docker.password"),
 			Email:    c.String("docker.email"),
 		},
+		Script: docker.Script{
+			Script: c.StringSlice("script"),
+		},
 		Build: docker.Build{
 			Remote:      c.String("remote.url"),
 			Name:        c.String("commit.sha"),
@@ -244,6 +257,7 @@ func run(c *cli.Context) error {
 			Repo:        c.String("repo"),
 			LabelSchema: c.StringSlice("label-schema"),
 			NoCache:     c.Bool("no-cache"),
+			Disable:     c.Bool("disable-build"),
 		},
 		Daemon: docker.Daemon{
 			Registry:      c.String("docker.registry"),
